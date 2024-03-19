@@ -12,7 +12,7 @@ void Parser::parse(QString content)
 {
     auto values = parseHtml(content);
     qDebug() << values.first << values.second;
-//    qDebug() << *(values.first)({}) << values.second;
+    qDebug() << values.first->operator ()({}) << values.second;
 }
 
 QPair<Node*, QString> Parser::parseHtml(QString content)
@@ -72,44 +72,55 @@ QPair<Node *, QString> Parser::parseVar(QString content)
         if(content[i] == "}"){
             args = content.mid(0, i-1).trimmed();
             if(args.isEmpty()){
-                qFatal("error");
+                qFatal("empty error");
             }
+            if(!isVaribleValid(args)){
+                qFatal("not match");
+            }
+
             auto node = new VariableNode(args);
-            return {node, content.mid(i)};
+            return {node, content.mid(i+1)};
         }
     }
     qFatal("erorr");
     return {};
 }
 
-bool Parser::isCurrentPlain(QString)
+bool Parser::isCurrent(const QString &val, const QString &type)
 {
-
-    return {};
+    return val.startsWith(type);
 }
 
-bool Parser::isCurrentIf(QString)
+bool Parser::isCurrentPlain(QString content)
 {
-
-    return {};
+    return !isCurrentIf(content)
+            && !isCurrentFor(content)
+            && !isCurrentVar(content)
+            && !isCurrentEnd(content);
 }
 
-bool Parser::isCurrentFor(QString)
+bool Parser::isCurrentIf(QString content)
 {
+    return isCurrent(content, "$if");
+}
 
-    return {};
+bool Parser::isCurrentFor(QString content)
+{
+    return isCurrent(content, "$for");
 }
 
 bool Parser::isCurrentVar(QString content)
 {
-    if(content.startsWith("${")){
-        return true;
-    }
-    return false;
+    return isCurrent(content, "${");
 }
 
-bool Parser::isCurrentEnd(QString)
+bool Parser::isCurrentEnd(QString content)
 {
+    return isCurrent(content, "}");
+}
 
-    return {};
+bool Parser::isVaribleValid(const QString &value)
+{
+    QRegExp exp("[a-zA-Z.]+");
+    return exp.exactMatch(value);
 }
