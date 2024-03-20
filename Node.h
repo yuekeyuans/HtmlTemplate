@@ -5,36 +5,45 @@
 struct UnionNode : public Node
 {
 public:
-    UnionNode(QList<Node*> nodes) : m_nodes(nodes){}
-    virtual QString operator ()(QJsonValue json) final{
-        QString ret;
-        for(auto node : m_nodes){
-            ret.append((*node)(json));
-        }
-        return ret;
-    }
+    UnionNode(QList<Node*> nodes);
+    virtual QString operator ()(QJsonValue json) final;
 
 public:
     QList<Node*> m_nodes;
 };
 
-struct HtmlNode : public Node{
+struct HtmlNode : public Node
+{
 public:
-    HtmlNode(const QString& html) : m_html(html){}
-    virtual QString operator ()(QJsonValue) final{
-        return m_html;
-    }
+    HtmlNode(const QString& html);
+    virtual QString operator ()(QJsonValue) final;
 public:
     QString m_html;
 };
 
-struct VariableNode : public Node{
-public:
-    VariableNode(const QString& path) : m_path(path){}
-    virtual QString operator ()(QJsonValue) final{
-        return m_path + " value";
-    }
+struct VariableNode : public Node
+{
+    VariableNode(const QString& path);
+    virtual QString operator ()(QJsonValue) final;
 public:
     QString m_path;
+};
+
+struct IfNode : public Node
+{
+    virtual QString operator ()(QJsonValue) final;
+public:
+    QString m_condition;
+    Node* m_ifOps{};
+    Node* m_elseOps{};
+};
+
+struct ForNode : public Node
+{
+    virtual QString operator ()(QJsonValue) final;
+public:
+    QString m_iterator;
+    QString m_path;
+    Node* m_loopContent;
 };
 
