@@ -43,14 +43,23 @@ QPair<Node*, QString> Parser::parseHtml(QString content)
         }
     }
 
-    return {new UnionNode(nodes), content};
+    if(nodes.length() == 1){
+        return {nodes.first(), content};
+    }else{
+        return {new UnionNode(nodes), content};
+    }
 }
 
 QPair<Node *, QString> Parser::parsePlain(QString content)
 {
-    auto index = content.indexOf("$");
-    auto node = new HtmlNode(content.mid(0, index));
-    return {node, content.mid(index+1)};
+    auto index1 = content.indexOf("$");
+    index1 = index1 == -1 ? std::numeric_limits<int>::max() : index1;
+    auto index2 = content.indexOf("}");
+    index2 = index2 == -1 ? std::numeric_limits<int>::max() : index2;
+    auto pos = std::min(index1, index2);
+
+    auto node = new HtmlNode(content.mid(0, pos));
+    return {node, content.mid(pos)};
 }
 
 QPair<Node *, QString> Parser::parseIf(QString content)
@@ -90,12 +99,13 @@ QPair<Node *, QString> Parser::parseFor(QString content)
 
 QPair<Node *, QString> Parser::parseVar(QString content)
 {
+    content = content.trimmed();
     content = content.mid(2);
     QString args;
     int len = content.length();
     for(int i=0; i<len; i++){
         if(content[i] == "}"){
-            args = content.mid(0, i-1).trimmed();
+            args = content.mid(0, i).trimmed();
             if(args.isEmpty()){
                 qFatal("empty error");
             }

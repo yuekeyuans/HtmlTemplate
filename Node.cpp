@@ -5,7 +5,8 @@ UnionNode::UnionNode(QList<Node *> nodes) : m_nodes(nodes){}
 QString UnionNode::operator ()(QJsonValue json){
     QString ret;
     for(auto node : m_nodes){
-        ret.append((*node)(json));
+        qDebug() << "union nodes";
+        ret.append(node->operator ()(json));
     }
     return ret;
 }
@@ -13,18 +14,20 @@ QString UnionNode::operator ()(QJsonValue json){
 HtmlNode::HtmlNode(const QString &html) : m_html(html){}
 
 QString HtmlNode::operator ()(QJsonValue){
+    qDebug() << "html node";
     return m_html;
 }
 
 VariableNode::VariableNode(const QString &path) : m_path(path){}
 
 QString VariableNode::operator ()(QJsonValue){
+    qDebug() << "variable node" << m_path;
     return m_path + " value";
 }
 
 QString IfNode::operator ()(QJsonValue value)
 {
-    qDebug() << "if condition: " + m_condition;
+    qDebug() << "if node: " + m_condition;
     if(true){
         if(m_ifOps){
             return m_ifOps->operator ()(value);
@@ -37,9 +40,9 @@ QString IfNode::operator ()(QJsonValue value)
     return "";
 }
 
-
-QString ForNode::operator ()(QJsonValue)
+QString ForNode::operator ()(QJsonValue value)
 {
-    return "hello world";
+    qDebug() << "for node" << m_path << m_iterator;
+    return m_loopContent->operator ()(value);
 }
 
