@@ -4,9 +4,9 @@
 
 struct Node
 {
-    virtual QString operator ()(QJsonValue) = 0;
-
-//    QJsonValue getValue(const QString& path, QJsonValue);
+    virtual QString operator ()(QJsonValue, QMap<QString, QJsonValue>) = 0;
+    QJsonValue getValue(const QString& path, QJsonValue);
+    QJsonValue getValue(const QString& path, QMap<QString, QJsonValue>);
 };
 
 class Parser
@@ -28,7 +28,6 @@ private:
 
 private:
     bool isCurrent(const QString& val, const QString& type);
-    bool isCurrentPlain(QString);
     bool isCurrentIf(QString);
     bool isCurrentFor(QString);
     bool isCurrentVar(QString);

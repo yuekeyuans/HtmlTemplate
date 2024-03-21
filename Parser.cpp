@@ -1,7 +1,7 @@
 ﻿#include "Parser.h"
 #include "Node.h"
 
-#include "QtCore"
+#include <QtCore>
 
 Parser::Parser()
 {
@@ -10,14 +10,14 @@ Parser::Parser()
 void Parser::parse(QString content)
 {
     auto values = parseHtml(content);
-    qDebug() << values.first->operator ()({}) << values.second;
+    qDebug() << values.first->operator ()({}, {}) << values.second;
 }
 
 QPair<Node*, QString> Parser::parseHtml(QString content)
 {
     content = content.trimmed();
     QList<Node*> nodes;
-    while(!content.isEmpty()){
+    while(!content.isEmpty() && !isCurrentEnd(content)){
         if(isCurrentIf(content)){
             auto ret = parseIf(content);
             nodes.append(ret.first);
@@ -32,8 +32,6 @@ QPair<Node*, QString> Parser::parseHtml(QString content)
             auto ret = parseVar(content);
             nodes.append(ret.first);
             content = ret.second;
-        }else if(isCurrentEnd(content)){
-            break;     // 表示该结束了，这里直接返回
         }else {
             auto ret = parsePlain(content);
             nodes.append(ret.first);
@@ -200,14 +198,6 @@ bool Parser::isCurrent(const QString &val, const QString &type)
     return val.startsWith(type);
 }
 
-bool Parser::isCurrentPlain(QString content)
-{
-    return !isCurrentIf(content)
-            && !isCurrentFor(content)
-            && !isCurrentVar(content)
-            && !isCurrentEnd(content);
-}
-
 bool Parser::isCurrentIf(QString content)
 {
     return isCurrent(content, "$if");
@@ -271,7 +261,13 @@ QString Parser::eatVariable(QString content, QString val)
     return content.mid(val.length());
 }
 
-//QJsonValue Node::getValue(const QString &path, QJsonValue)
-//{
-//    return {};
-//}
+
+QJsonValue Node::getValue(const QString &path, QJsonValue)
+{
+    return {};
+}
+
+QJsonValue Node::getValue(const QString &path, QMap<QString, QJsonValue>)
+{
+    return {};
+}
