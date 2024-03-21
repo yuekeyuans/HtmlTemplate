@@ -5,13 +5,11 @@
 
 Parser::Parser()
 {
-
 }
 
 void Parser::parse(QString content)
 {
     auto values = parseHtml(content);
-    qDebug() << values.first << values.second;
     qDebug() << values.first->operator ()({}) << values.second;
 }
 
@@ -43,6 +41,9 @@ QPair<Node*, QString> Parser::parseHtml(QString content)
         }
     }
 
+    if(nodes.isEmpty()){
+        return {nullptr, content};
+    }
     if(nodes.length() == 1){
         return {nodes.first(), content};
     }else{
@@ -64,8 +65,83 @@ QPair<Node *, QString> Parser::parsePlain(QString content)
 
 QPair<Node *, QString> Parser::parseIf(QString content)
 {
+    content = content.trimmed();
+    if(!content.startsWith("$if ")){
+        qFatal("$if should with space");
+    }
 
-    return {};
+    auto node = new IfNode;
+    content = content.mid(4).trimmed();
+    auto condition = readVariable(content, "$if statement can not read condition");
+    node->m_condition = condition.first;
+    content = condition.second;
+
+    content = eatVariable(content, "{{");
+    auto contentVal = parseHtml(content);
+    node->m_ifOps = contentVal.first;
+    content = contentVal.second;
+
+    content = eatVariable(content, "}}").trimmed();
+    if(content.startsWith("$elif ")){
+        auto val = parseElif(content);
+        node->m_elseOps = val.first;
+        content = val.second;
+    }else if(content.startsWith("$else")){
+        auto val = parseElse(content);
+        node->m_elseOps = val.first;
+        content = val.second;
+    }
+
+    return {node, content};
+}
+
+QPair<Node *, QString> Parser::parseElif(QString content)
+{
+    content = content.trimmed();
+    if(!content.startsWith("$elif ")){
+        qFatal("$elif should with space");
+    }
+
+    auto node = new IfNode;
+    content = content.mid(6).trimmed();
+    auto condition = readVariable(content, "$elif statement can not read condition");
+    node->m_condition = condition.first;
+    content = condition.second;
+
+    content = eatVariable(content, "{{");
+    auto contentVal = parseHtml(content);
+    node->m_ifOps = contentVal.first;
+    content = contentVal.second;
+
+    content = eatVariable(content, "}}").trimmed();
+    if(content.startsWith("$elif")){
+        auto val = parseElif(content);
+        node->m_elseOps = val.first;
+        content = val.second;
+    }else if(content.startsWith("$else")){
+        auto val = parseElse(content);
+        node->m_elseOps = val.first;
+        content = val.second;
+    }
+
+    content = eatVariable(content, "}}").trimmed();
+    return {node, content};
+}
+
+QPair<Node *, QString> Parser::parseElse(QString content)
+{
+    content = content.trimmed();
+    if(content.startsWith("$else")){
+        qFatal("$elif should with space");
+    }
+
+    content = content.mid(5).trimmed();
+    content = eatVariable(content, "{{");
+    auto contentVal = parseHtml(content);
+    auto node = contentVal.first;
+    content = contentVal.second;
+    content = eatVariable(content, "}}").trimmed();
+    return {node, content};
 }
 
 QPair<Node *, QString> Parser::parseFor(QString content)
@@ -77,13 +153,13 @@ QPair<Node *, QString> Parser::parseFor(QString content)
     auto node = new ForNode();
 
     content = content.mid(4);
-    auto ret = readVariable(content);
+    auto ret = readVariable(content, "$for statement can not read loop iterator");
     node->m_iterator = ret.first;
     content = ret.second;
 
     content = eatVariable(content, "in");
 
-    auto val = readVariable(content);
+    auto val = readVariable(content, "$for statement can not read loop body");
     node->m_path = val.first;
     content = val.second;
 
@@ -109,9 +185,7 @@ QPair<Node *, QString> Parser::parseVar(QString content)
             if(args.isEmpty()){
                 qFatal("empty error");
             }
-            if(!isVariableValid(args)){
-                qFatal("not match");
-            }
+            checkVariableValid(args);
 
             auto node = new VariableNode(args);
             return {node, content.mid(i+1)};
@@ -155,40 +229,49 @@ bool Parser::isCurrentEnd(QString content)
     return isCurrent(content, "}") || isCurrent(content, "}}");
 }
 
-bool Parser::isVariableValid(const QString &value)
+bool Parser::checkVariableValid(const QString &value)
 {
     QRegExp regExp("^[a-zA-Z]+(\\.[a-zA-Z]+)*$");
-    return regExp.exactMatch(value);
+    bool valid = regExp.exactMatch(value);
+    if(!valid){
+        QString tip = "error occured when parse variable: " + value;
+        qFatal(tip.toUtf8());
+    }
+    return valid;
 }
 
-QPair<QString, QString> Parser::readVariable(QString content)
+QPair<QString, QString> Parser::readVariable(QString content, const QString& failReason)
 {
     content = content.trimmed();
-    auto index1 = content.indexOf(' ');
+    auto index1 = content.indexOf(' ');     // TODO: 这里不仅是 空格，也有可能是 tab 或者 换行
     index1 = index1 == -1? std::numeric_limits<int>::max() : index1;
     auto index2 = content.indexOf('}');
     index2 = index2 == -1 ? std::numeric_limits<int>::max() : index2;
-    auto pos = std::min(index1, index2);
+    auto index3 = content.indexOf("{");
+    index3 = index3 == -1 ? std::numeric_limits<int>::max() : index3;
+    auto pos = std::min({index1, index2, index3});
     if(pos == std::numeric_limits<int>::max()){
-        qFatal("content is not vaild for parse args");
+        qFatal("content is not vaild for parse any args");
     }
 
     auto text = content.mid(0, pos).trimmed();
-    if(!isVariableValid(text)){
-        qFatal("variable not valid");
+    if(!checkVariableValid(text)){
+        qFatal(failReason.toUtf8());
     }
-    return {text, content.mid(pos+1)};
+
+    return {text, content.mid(pos)};
 }
 
-QString Parser::eatVariable(const QString &content, QString val)
+QString Parser::eatVariable(QString content, QString val)
 {
-    if(!content.trimmed().startsWith(val)){
+    content = content.trimmed();
+    if(!content.startsWith(val)){
         qFatal("error, can not eat ", val.toUtf8());
     }
-    return content.trimmed().mid(val.length());
+    return content.mid(val.length());
 }
 
-QJsonValue Node::getValue(const QString &path, QJsonValue)
-{
-    return {};
-}
+//QJsonValue Node::getValue(const QString &path, QJsonValue)
+//{
+//    return {};
+//}

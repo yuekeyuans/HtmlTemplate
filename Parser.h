@@ -6,7 +6,7 @@ struct Node
 {
     virtual QString operator ()(QJsonValue) = 0;
 
-    QJsonValue getValue(const QString& path, QJsonValue);
+//    QJsonValue getValue(const QString& path, QJsonValue);
 };
 
 class Parser
@@ -21,6 +21,8 @@ private:
     QPair<Node*, QString> parseHtml(QString);
     QPair<Node*, QString> parsePlain(QString);
     QPair<Node*, QString> parseIf(QString content);
+    QPair<Node*, QString> parseElif(QString content);
+    QPair<Node*, QString> parseElse(QString content);
     QPair<Node*, QString> parseFor(QString content);
     QPair<Node*, QString> parseVar(QString content);
 
@@ -33,9 +35,9 @@ private:
     bool isCurrentEnd(QString);
 
 private:
-    bool isVariableValid(const QString&);
-    QPair<QString, QString> readVariable(QString content);
-    QString eatVariable(const QString& content, QString val);
+    bool checkVariableValid(const QString&);
+    QPair<QString, QString> readVariable(QString content, const QString& failReason);
+    QString eatVariable(QString content, QString val);
 
 private:
     QString m_content;
