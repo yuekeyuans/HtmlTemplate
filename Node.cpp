@@ -45,3 +45,19 @@ QString ForNode::operator ()(QJsonValue root, QMap<QString, QJsonValue> context)
     return m_loopContent->operator ()(root, context);
 }
 
+
+ParserException::ParserException(const QString &error)
+{
+    m_error.append(error);
+}
+
+const char *ParserException::what() const
+{
+    QString info = m_error.join("\n");
+    return info.toStdString().c_str();
+}
+
+void ParserException::addTrace(const QString &content)
+{
+    m_error.append(content);
+}

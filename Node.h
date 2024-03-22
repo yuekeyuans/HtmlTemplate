@@ -47,3 +47,16 @@ public:
     Node* m_loopContent;
 };
 
+
+class ParserException : std::exception
+{
+public:
+    ParserException(const QString& error);
+    virtual const char *what() const final;
+
+public:
+    void addTrace(const QString& content);
+
+private:
+    QStringList m_error;
+};

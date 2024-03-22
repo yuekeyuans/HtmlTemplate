@@ -9,8 +9,13 @@ Parser::Parser()
 
 void Parser::parse(QString content)
 {
-    auto values = parseHtml(content);
-    qDebug() << values.first->operator ()({}, {}) << values.second;
+    QPair<Node*, QString> value;
+    try{
+        value = parseHtml(content);
+        qDebug() << value.first->operator ()({}, {}) << value.second;
+    }catch(ParserException e){
+        qDebug() << e.what();
+    }
 }
 
 QPair<Node*, QString> Parser::parseHtml(QString content)
@@ -65,7 +70,7 @@ QPair<Node *, QString> Parser::parseIf(QString content)
 {
     content = content.trimmed();
     if(!content.startsWith("$if ")){
-        qFatal("$if should with space");
+        throw ParserException("$if should with space");
     }
 
     auto node = new IfNode;
@@ -97,7 +102,7 @@ QPair<Node *, QString> Parser::parseElif(QString content)
 {
     content = content.trimmed();
     if(!content.startsWith("$elif ")){
-        qFatal("$elif should with space");
+        throw ParserException("$elif should with space");
     }
 
     auto node = new IfNode;
@@ -130,7 +135,7 @@ QPair<Node *, QString> Parser::parseElse(QString content)
 {
     content = content.trimmed();
     if(content.startsWith("$else")){
-        qFatal("$elif should with space");
+        throw ParserException("$elif should with space");
     }
 
     content = content.mid(5).trimmed();
@@ -145,7 +150,7 @@ QPair<Node *, QString> Parser::parseElse(QString content)
 QPair<Node *, QString> Parser::parseFor(QString content)
 {
     if(!content.startsWith("$for ")){
-        qFatal("$for should with space");
+        throw ParserException("$for should with space");
     }
 
     auto node = new ForNode();
@@ -181,7 +186,7 @@ QPair<Node *, QString> Parser::parseVar(QString content)
         if(content[i] == "}"){
             args = content.mid(0, i).trimmed();
             if(args.isEmpty()){
-                qFatal("empty error");
+                throw ParserException("empty error");
             }
             checkVariableValid(args);
 
@@ -225,7 +230,7 @@ bool Parser::checkVariableValid(const QString &value)
     bool valid = regExp.exactMatch(value);
     if(!valid){
         QString tip = "error occured when parse variable: " + value;
-        qFatal(tip.toUtf8());
+        throw ParserException(tip);
     }
     return valid;
 }
@@ -241,12 +246,12 @@ QPair<QString, QString> Parser::readVariable(QString content, const QString& fai
     index3 = index3 == -1 ? std::numeric_limits<int>::max() : index3;
     auto pos = std::min({index1, index2, index3});
     if(pos == std::numeric_limits<int>::max()){
-        qFatal("content is not vaild for parse any args");
+        throw ParserException("content is not vaild for parse any args");
     }
 
     auto text = content.mid(0, pos).trimmed();
     if(!checkVariableValid(text)){
-        qFatal(failReason.toUtf8());
+        throw ParserException(failReason.toUtf8());
     }
 
     return {text, content.mid(pos)};
@@ -256,7 +261,7 @@ QString Parser::eatVariable(QString content, QString val)
 {
     content = content.trimmed();
     if(!content.startsWith(val)){
-        qFatal("error, can not eat ", val.toUtf8());
+        throw ParserException("error, can not eat variable: "+  val);
     }
     return content.mid(val.length());
 }
