@@ -6,7 +6,7 @@ struct UnionNode : public Node
 {
 public:
     UnionNode(QList<Node*> nodes);
-    virtual QString operator ()(QJsonValue json) final;
+    virtual QString operator ()(QJsonValue root, QMap<QString, QJsonValue> context) final;
 
 public:
     QList<Node*> m_nodes;
@@ -16,7 +16,7 @@ struct HtmlNode : public Node
 {
 public:
     HtmlNode(const QString& html);
-    virtual QString operator ()(QJsonValue) final;
+    virtual QString operator ()(QJsonValue, QMap<QString, QJsonValue>) final;
 public:
     QString m_html;
 };
@@ -24,14 +24,14 @@ public:
 struct VariableNode : public Node
 {
     VariableNode(const QString& path);
-    virtual QString operator ()(QJsonValue) final;
+    virtual QString operator ()(QJsonValue, QMap<QString, QJsonValue>) final;
 public:
     QString m_path;
 };
 
 struct IfNode : public Node
 {
-    virtual QString operator ()(QJsonValue) final;
+    virtual QString operator ()(QJsonValue, QMap<QString, QJsonValue>) final;
 public:
     QString m_condition;
     Node* m_ifOps{};
@@ -40,7 +40,7 @@ public:
 
 struct ForNode : public Node
 {
-    virtual QString operator ()(QJsonValue) final;
+    virtual QString operator ()(QJsonValue, QMap<QString, QJsonValue>) final;
 public:
     QString m_iterator;
     QString m_path;
