@@ -1,27 +1,27 @@
-﻿#include "Node.h"
+﻿#include "Nody.h"
 
-QJsonValue Node::getValue(const QString &, const QJsonValue&)
+QJsonValue Nody::getValue(const QString &, const QJsonValue&)
 {
     return {};
 }
 
-QJsonValue Node::getValue(const QString &, const QMap<QString, QJsonValue>&)
+QJsonValue Nody::getValue(const QString &, const QMap<QString, QJsonValue>&)
 {
     return {};
 }
 
-UnionNode::UnionNode(QList<Node *> nodes) : m_nodes(nodes)
+UnionNody::UnionNody(QList<Nody *> nodes) : m_nodes(nodes)
 {
 }
 
-UnionNode::~UnionNode()
+UnionNody::~UnionNody()
 {
     for(auto node: m_nodes){
         delete node;
     }
 }
 
-QString UnionNode::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context){
+QString UnionNody::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context){
     QString ret;
     for(auto node : m_nodes){
         ret.append(node->operator ()(root, context));
@@ -29,15 +29,15 @@ QString UnionNode::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>
     return ret;
 }
 
-HtmlNode::HtmlNode(const QString &html) : m_html(html){}
+HtmlNody::HtmlNody(const QString &html) : m_html(html){}
 
-QString HtmlNode::operator ()(const QJsonValue&, QMap<QString, QJsonValue>&){
+QString HtmlNody::operator ()(const QJsonValue&, QMap<QString, QJsonValue>&){
     return m_html;
 }
 
-VariableNode::VariableNode(const QString &path) : m_path(path){}
+VariableNody::VariableNody(const QString &path) : m_path(path){}
 
-QString VariableNode::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context){
+QString VariableNody::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context){
     auto value = getValue(m_path, context);
     if(value.isNull() || value.isUndefined()){
         value = getValue(m_path, root);
@@ -45,13 +45,13 @@ QString VariableNode::operator ()(const QJsonValue& root, QMap<QString, QJsonVal
     return value.toString();
 }
 
-IfNode::~IfNode()
+IfNody::~IfNody()
 {
     delete m_ifOps;
     delete m_elseOps;
 }
 
-QString IfNode::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context)
+QString IfNody::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context)
 {
     if(true){
         if(m_ifOps){
@@ -65,38 +65,38 @@ QString IfNode::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& c
     return "";
 }
 
-ForNode::~ForNode()
+ForNody::~ForNody()
 {
     delete m_loopContent;
     m_loopContent = nullptr;
 }
 
-QString ForNode::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context)
+QString ForNody::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context)
 {
     return m_loopContent->operator ()(root, context);
 }
 
-ParserException::ParserException(const QString &error, const QString& content)
+NodyException::NodyException(const QString &error, const QString& content)
 {
     m_error.append(makeTrace(error, content));
 }
 
-const char *ParserException::what() const
+const char *NodyException::what() const
 {
     return m_error.join("\n").toUtf8();
 }
 
-void ParserException::addTrace(const QString &error, const QString& content)
+void NodyException::addTrace(const QString &error, const QString& content)
 {
     m_error.append(makeTrace(error, content));
 }
 
-QString ParserException::getTraces()
+QString NodyException::getTraces()
 {
     return m_error.join(" \n");
 }
 
-QString ParserException::makeTrace(const QString &error, const QString &content)
+QString NodyException::makeTrace(const QString &error, const QString &content)
 {
     QString brief = content.left(40);
     QString ret = QString("ERROR: ").append(error).append(" NEAR: ").append(brief);

@@ -1,9 +1,9 @@
 ﻿#include <QCoreApplication>
-#include "parser.h"
+#include "NodyParser.h"
 
 int main(int argc, char *argv[])
 {
-    Parser parser;
+    NodyParser parser;
 
 //    parser.parse("${ hello.world }");
 

@@ -1,33 +1,33 @@
-﻿#include "Parser.h"
-#include "Node.h"
+﻿#include "NodyParser.h"
+#include "Nody.h"
 
 #include <QtCore>
 
-Parser::Parser()
+NodyParser::NodyParser()
 {
 }
 
-void Parser::parse(QString content)
+void NodyParser::parse(QString content)
 {
-    QPair<Node*, QString> value;
+    QPair<Nody*, QString> value;
     try{
         value = parseHtml(content);
 //        qDebug() << value.first->operator ()({}, {}) << value.second;
-    }catch(ParserException e){
+    }catch(NodyException e){
         qDebug().noquote() << e.getTraces();
     }
 }
 
-QPair<Node*, QString> Parser::parseHtml(QString content)
+QPair<Nody*, QString> NodyParser::parseHtml(QString content)
 {
     content = content.trimmed();
-    QList<Node*> nodes;
+    QList<Nody*> nodes;
     while(!content.isEmpty() && !isCurrentEnd(content)){
-        QPair<Node*, QString> ret;
+        QPair<Nody*, QString> ret;
         if(isCurrentIf(content)){
             try{
                 ret = parseIf(content);
-            }catch(ParserException e){
+            }catch(NodyException e){
                 e.addTrace("parse $if error", content);
                 throw e;
             }
@@ -38,7 +38,7 @@ QPair<Node*, QString> Parser::parseHtml(QString content)
         else if(isCurrentFor(content)){
             try{
                 ret = parseFor(content);
-            }catch(ParserException e){
+            }catch(NodyException e){
                 e.addTrace("parse $for error", content);
                 throw e;
             }
@@ -48,7 +48,7 @@ QPair<Node*, QString> Parser::parseHtml(QString content)
         else if(isCurrentVar(content)){
             try{
                 ret = parseVar(content);
-            }catch(ParserException e){
+            }catch(NodyException e){
                 e.addTrace("parse ${} variable error", content);
                 throw e;
             }
@@ -57,7 +57,7 @@ QPair<Node*, QString> Parser::parseHtml(QString content)
         }else {
             try{
                 ret = parsePlain(content);
-            }catch(ParserException e){
+            }catch(NodyException e){
                 e.addTrace("parse plainTextError error", content);
                 throw e;
             }
@@ -73,11 +73,11 @@ QPair<Node*, QString> Parser::parseHtml(QString content)
     if(nodes.length() == 1){
         return {nodes.first(), content};
     }else{
-        return {new UnionNode(nodes), content};
+        return {new UnionNody(nodes), content};
     }
 }
 
-QPair<Node *, QString> Parser::parsePlain(QString content)
+QPair<Nody *, QString> NodyParser::parsePlain(QString content)
 {
     auto index1 = content.indexOf("$");
     index1 = index1 == -1 ? std::numeric_limits<int>::max() : index1;
@@ -85,18 +85,18 @@ QPair<Node *, QString> Parser::parsePlain(QString content)
     index2 = index2 == -1 ? std::numeric_limits<int>::max() : index2;
     auto pos = std::min(index1, index2);
 
-    auto node = new HtmlNode(content.mid(0, pos));
+    auto node = new HtmlNody(content.mid(0, pos));
     return {node, content.mid(pos)};
 }
 
-QPair<Node *, QString> Parser::parseIf(QString content)
+QPair<Nody *, QString> NodyParser::parseIf(QString content)
 {
     content = content.trimmed();
     if(!content.startsWith("$if ")){
-        throw ParserException("$if should with space", content);
+        throw NodyException("$if should with space", content);
     }
 
-    auto node = new IfNode;
+    auto node = new IfNody;
     content = content.mid(4).trimmed();
     auto condition = readVariable(content, "$if statement can not read condition");
     node->m_condition = condition.first;
@@ -121,14 +121,14 @@ QPair<Node *, QString> Parser::parseIf(QString content)
     return {node, content};
 }
 
-QPair<Node *, QString> Parser::parseElif(QString content)
+QPair<Nody *, QString> NodyParser::parseElif(QString content)
 {
     content = content.trimmed();
     if(!content.startsWith("$elif ")){
-        throw ParserException("$elif should with space", content);
+        throw NodyException("$elif should with space", content);
     }
 
-    auto node = new IfNode;
+    auto node = new IfNody;
     content = content.mid(6).trimmed();
     auto condition = readVariable(content, "$elif statement can not read condition");
     node->m_condition = condition.first;
@@ -154,7 +154,7 @@ QPair<Node *, QString> Parser::parseElif(QString content)
     return {node, content};
 }
 
-QPair<Node *, QString> Parser::parseElse(QString content)
+QPair<Nody *, QString> NodyParser::parseElse(QString content)
 {
     content = content.trimmed();
     content = content.mid(5).trimmed();
@@ -166,13 +166,13 @@ QPair<Node *, QString> Parser::parseElse(QString content)
     return {node, content};
 }
 
-QPair<Node *, QString> Parser::parseFor(QString content)
+QPair<Nody *, QString> NodyParser::parseFor(QString content)
 {
     if(!content.startsWith("$for ")){
-        throw ParserException("$for should with space", content);
+        throw NodyException("$for should with space", content);
     }
 
-    auto node = new ForNode();
+    auto node = new ForNody();
 
     content = content.mid(4);
     auto ret = readVariable(content, "$for statement can not read loop iterator");
@@ -195,7 +195,7 @@ QPair<Node *, QString> Parser::parseFor(QString content)
     return {node, content};
 }
 
-QPair<Node *, QString> Parser::parseVar(QString content)
+QPair<Nody *, QString> NodyParser::parseVar(QString content)
 {
     content = content.trimmed();
     content = content.mid(2);
@@ -205,11 +205,11 @@ QPair<Node *, QString> Parser::parseVar(QString content)
         if(content[i] == "}"){
             args = content.mid(0, i).trimmed();
             if(args.isEmpty()){
-                throw ParserException("empty error", content);
+                throw NodyException("empty error", content);
             }
             checkVariableValid(args);
 
-            auto node = new VariableNode(args);
+            auto node = new VariableNody(args);
             return {node, content.mid(i+1)};
         }
     }
@@ -217,44 +217,44 @@ QPair<Node *, QString> Parser::parseVar(QString content)
     return {};
 }
 
-bool Parser::isCurrent(const QString &val, const QString &type)
+bool NodyParser::isCurrent(const QString &val, const QString &type)
 {
     return val.startsWith(type);
 }
 
-bool Parser::isCurrentIf(QString content)
+bool NodyParser::isCurrentIf(QString content)
 {
     return isCurrent(content, "$if");
 }
 
-bool Parser::isCurrentFor(QString content)
+bool NodyParser::isCurrentFor(QString content)
 {
     return isCurrent(content, "$for");
 }
 
-bool Parser::isCurrentVar(QString content)
+bool NodyParser::isCurrentVar(QString content)
 {
     return isCurrent(content, "${");
 }
 
-bool Parser::isCurrentEnd(QString content)
+bool NodyParser::isCurrentEnd(QString content)
 {
     content = content.trimmed();
     return isCurrent(content, "}") || isCurrent(content, "}}");
 }
 
-bool Parser::checkVariableValid(const QString &value)
+bool NodyParser::checkVariableValid(const QString &value)
 {
     QRegExp regExp("^[a-zA-Z]+(\\.[a-zA-Z]+)*$");
     bool valid = regExp.exactMatch(value);
     if(!valid){
         QString tip = "error occured when parse variable: " + value;
-        throw ParserException(tip, value);
+        throw NodyException(tip, value);
     }
     return valid;
 }
 
-QPair<QString, QString> Parser::readVariable(QString content, const QString& failReason)
+QPair<QString, QString> NodyParser::readVariable(QString content, const QString& failReason)
 {
     content = content.trimmed();
     auto index1 = content.indexOf(' ');     // TODO: 这里不仅是 空格，也有可能是 tab 或者 换行
@@ -265,22 +265,22 @@ QPair<QString, QString> Parser::readVariable(QString content, const QString& fai
     index3 = index3 == -1 ? std::numeric_limits<int>::max() : index3;
     auto pos = std::min({index1, index2, index3});
     if(pos == std::numeric_limits<int>::max()){
-        throw ParserException("content is not vaild for parse any args", content);
+        throw NodyException("content is not vaild for parse any args", content);
     }
 
     auto text = content.mid(0, pos).trimmed();
     if(!checkVariableValid(text)){
-        throw ParserException(failReason, content);
+        throw NodyException(failReason, content);
     }
 
     return {text, content.mid(pos)};
 }
 
-QString Parser::eatVariable(QString content, QString val)
+QString NodyParser::eatVariable(QString content, QString val)
 {
     content = content.trimmed();
     if(!content.startsWith(val)){
-        throw ParserException("error, can not eat variable: "+  val, content);
+        throw NodyException("error, can not eat variable: "+  val, content);
     }
     return content.mid(val.length());
 }

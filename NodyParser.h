@@ -1,24 +1,24 @@
 ﻿#pragma once
 
 #include <QtCore>
-#include "Node.h"
+#include "Nody.h"
 
-class Parser
+class NodyParser
 {
 public:
-    Parser();
+    NodyParser();
 
 public:
     void parse(QString content);
 
 private:
-    QPair<Node*, QString> parseHtml(QString);
-    QPair<Node*, QString> parsePlain(QString);
-    QPair<Node*, QString> parseIf(QString content);
-    QPair<Node*, QString> parseElif(QString content);
-    QPair<Node*, QString> parseElse(QString content);
-    QPair<Node*, QString> parseFor(QString content);
-    QPair<Node*, QString> parseVar(QString content);
+    QPair<Nody*, QString> parseHtml(QString);
+    QPair<Nody*, QString> parsePlain(QString);
+    QPair<Nody*, QString> parseIf(QString content);
+    QPair<Nody*, QString> parseElif(QString content);
+    QPair<Nody*, QString> parseElse(QString content);
+    QPair<Nody*, QString> parseFor(QString content);
+    QPair<Nody*, QString> parseVar(QString content);
 
 private:
     bool isCurrent(const QString& val, const QString& type);

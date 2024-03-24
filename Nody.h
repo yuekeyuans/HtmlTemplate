@@ -2,70 +2,70 @@
 
 #include <QtCore>
 
-struct Node
+struct Nody
 {
 public:
-    virtual ~Node() = default;
+    virtual ~Nody() = default;
     // 使用引用，因为传递不需要拷贝，但是如果在函数内改变该内容了，则是需要拷贝备份的。
     virtual QString operator ()(const QJsonValue&, QMap<QString, QJsonValue>&) = 0;
     QJsonValue getValue(const QString& path, const QJsonValue&);
     QJsonValue getValue(const QString& path, const QMap<QString, QJsonValue>&);
 };
 
-struct UnionNode : public Node
+struct UnionNody : public Nody
 {
 public:
-    UnionNode(QList<Node*> nodes);
-    ~UnionNode();
+    UnionNody(QList<Nody*> nodes);
+    ~UnionNody();
     virtual QString operator ()(const QJsonValue&, QMap<QString, QJsonValue>&) final;
 
 public:
-    QList<Node*> m_nodes;
+    QList<Nody*> m_nodes;
 };
 
-struct HtmlNode : public Node
+struct HtmlNody : public Nody
 {
 public:
-    HtmlNode(const QString& html);
+    HtmlNody(const QString& html);
     virtual QString operator ()(const QJsonValue&, QMap<QString, QJsonValue>&) final;
 public:
     QString m_html;
 };
 
-struct VariableNode : public Node
+struct VariableNody : public Nody
 {
-    VariableNode(const QString& path);
+    VariableNody(const QString& path);
     virtual QString operator ()(const QJsonValue&, QMap<QString, QJsonValue>&) final;
 public:
     QString m_path;
 };
 
-struct IfNode : public Node
+struct IfNody : public Nody
 {
-    IfNode() = default;
-    ~IfNode();
+    IfNody() = default;
+    ~IfNody();
     virtual QString operator ()(const QJsonValue&, QMap<QString, QJsonValue>&) final;
 public:
     QString m_condition;
-    Node* m_ifOps{};
-    Node* m_elseOps{};
+    Nody* m_ifOps{};
+    Nody* m_elseOps{};
 };
 
-struct ForNode : public Node
+struct ForNody : public Nody
 {
-    ForNode() = default;
-    ~ForNode();
+    ForNody() = default;
+    ~ForNody();
     virtual QString operator ()(const QJsonValue&, QMap<QString, QJsonValue>&) final;
 public:
     QString m_iterator;
     QString m_path;
-    Node* m_loopContent;
+    Nody* m_loopContent;
 };
 
-class ParserException : std::exception
+class NodyException : std::exception
 {
 public:
-    ParserException(const QString& error, const QString& content);
+    NodyException(const QString& error, const QString& content);
     virtual const char *what() const final;
 
 public:
