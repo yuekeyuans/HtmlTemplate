@@ -1,13 +1,7 @@
 ﻿#pragma once
 
 #include <QtCore>
-
-struct Node
-{
-    virtual QString operator ()(QJsonValue, QMap<QString, QJsonValue>) = 0;
-    QJsonValue getValue(const QString& path, QJsonValue);
-    QJsonValue getValue(const QString& path, QMap<QString, QJsonValue>);
-};
+#include "Node.h"
 
 class Parser
 {

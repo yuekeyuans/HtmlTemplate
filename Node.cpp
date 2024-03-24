@@ -1,11 +1,29 @@
 ﻿#include "Node.h"
 
-UnionNode::UnionNode(QList<Node *> nodes) : m_nodes(nodes){}
+QJsonValue Node::getValue(const QString &, const QJsonValue&)
+{
+    return {};
+}
 
-QString UnionNode::operator ()(QJsonValue root, QMap<QString, QJsonValue> context){
+QJsonValue Node::getValue(const QString &, const QMap<QString, QJsonValue>&)
+{
+    return {};
+}
+
+UnionNode::UnionNode(QList<Node *> nodes) : m_nodes(nodes)
+{
+}
+
+UnionNode::~UnionNode()
+{
+    for(auto node: m_nodes){
+        delete node;
+    }
+}
+
+QString UnionNode::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context){
     QString ret;
     for(auto node : m_nodes){
-        qDebug() << "union nodes";
         ret.append(node->operator ()(root, context));
     }
     return ret;
@@ -13,20 +31,28 @@ QString UnionNode::operator ()(QJsonValue root, QMap<QString, QJsonValue> contex
 
 HtmlNode::HtmlNode(const QString &html) : m_html(html){}
 
-QString HtmlNode::operator ()(QJsonValue root, QMap<QString, QJsonValue> context){
+QString HtmlNode::operator ()(const QJsonValue&, QMap<QString, QJsonValue>&){
     return m_html;
 }
 
 VariableNode::VariableNode(const QString &path) : m_path(path){}
 
-QString VariableNode::operator ()(QJsonValue root, QMap<QString, QJsonValue> context){
-    qDebug() << "variable node" << m_path;
-    return m_path + " value";
+QString VariableNode::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context){
+    auto value = getValue(m_path, context);
+    if(value.isNull() || value.isUndefined()){
+        value = getValue(m_path, root);
+    }
+    return value.toString();
 }
 
-QString IfNode::operator ()(QJsonValue root, QMap<QString, QJsonValue> context)
+IfNode::~IfNode()
 {
-    qDebug() << "if node: " + m_condition;
+    delete m_ifOps;
+    delete m_elseOps;
+}
+
+QString IfNode::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context)
+{
     if(true){
         if(m_ifOps){
             return m_ifOps->operator ()(root, context);
@@ -39,25 +65,43 @@ QString IfNode::operator ()(QJsonValue root, QMap<QString, QJsonValue> context)
     return "";
 }
 
-QString ForNode::operator ()(QJsonValue root, QMap<QString, QJsonValue> context)
+ForNode::~ForNode()
 {
-    qDebug() << "for node" << m_path << m_iterator;
+    delete m_loopContent;
+    m_loopContent = nullptr;
+}
+
+QString ForNode::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context)
+{
     return m_loopContent->operator ()(root, context);
 }
 
-
-ParserException::ParserException(const QString &error)
+ParserException::ParserException(const QString &error, const QString& content)
 {
-    m_error.append(error);
+    m_error.append(makeTrace(error, content));
 }
 
 const char *ParserException::what() const
 {
-    QString info = m_error.join("\n");
-    return info.toStdString().c_str();
+    return m_error.join("\n").toUtf8();
 }
 
-void ParserException::addTrace(const QString &content)
+void ParserException::addTrace(const QString &error, const QString& content)
 {
-    m_error.append(content);
+    m_error.append(makeTrace(error, content));
+}
+
+QString ParserException::getTraces()
+{
+    return m_error.join(" \n");
+}
+
+QString ParserException::makeTrace(const QString &error, const QString &content)
+{
+    QString brief = content.left(40);
+    QString ret = QString("ERROR: ").append(error).append(" NEAR: ").append(brief);
+    if(brief != content){
+        ret.append("...");
+    }
+    return ret;
 }
