@@ -1,21 +1,48 @@
 ﻿#include "NodyParser.h"
-#include "Nody.h"
+#include "core/base/IFileUtil.h"
 
-#include <QtCore>
+$PackageWebCoreBegin
 
 NodyParser::NodyParser()
 {
 }
 
-void NodyParser::parse(QString content)
+IResult<QString> NodyParser::exec(QString content, const QJsonObject &json)
 {
     QPair<Nody*, QString> value;
     try{
         value = parseHtml(content);
-//        qDebug() << value.first->operator ()({}, {}) << value.second;
+    }catch(NodyException e){
+        if(value.first){
+            delete value.first;
+        }
+        return {{}, false};
+    }
+    QMap<QString, QJsonObject> map;
+    auto ret = value.first->execute(json, map);
+    delete value.first;
+    return ret;
+}
+
+IResult<QString> NodyParser::execFile(const QString &path, const QJsonObject &json)
+{
+    auto content = IFileUtil::readFileAsString(path);
+    if(!content.isOk()){
+        return {{}, false};
+    }
+    return exec(content, json);
+}
+
+Nody * NodyParser::parseContent(QString content)
+{
+    QPair<Nody*, QString> value;
+    try{
+        value = parseHtml(content);
     }catch(NodyException e){
         qDebug().noquote() << e.getTraces();
+        qFatal(e.getTraces().toUtf8());
     }
+    return value.first;
 }
 
 QPair<Nody*, QString> NodyParser::parseHtml(QString content)
@@ -104,17 +131,17 @@ QPair<Nody *, QString> NodyParser::parseIf(QString content)
 
     content = eatVariable(content, "{{");
     auto contentVal = parseHtml(content);
-    node->m_ifOps = contentVal.first;
+    node->m_ifNode = contentVal.first;
     content = contentVal.second;
 
     content = eatVariable(content, "}}").trimmed();
     if(content.startsWith("$elif ")){
         auto val = parseElif(content);
-        node->m_elseOps = val.first;
+        node->m_elseNode = val.first;
         content = val.second;
     }else if(content.startsWith("$else")){
         auto val = parseElse(content);
-        node->m_elseOps = val.first;
+        node->m_elseNode = val.first;
         content = val.second;
     }
 
@@ -136,17 +163,17 @@ QPair<Nody *, QString> NodyParser::parseElif(QString content)
 
     content = eatVariable(content, "{{");
     auto contentVal = parseHtml(content);
-    node->m_ifOps = contentVal.first;
+    node->m_ifNode = contentVal.first;
     content = contentVal.second;
 
     content = eatVariable(content, "}}").trimmed();
     if(content.startsWith("$elif")){
         auto val = parseElif(content);
-        node->m_elseOps = val.first;
+        node->m_elseNode = val.first;
         content = val.second;
     }else if(content.startsWith("$else")){
         auto val = parseElse(content);
-        node->m_elseOps = val.first;
+        node->m_elseNode = val.first;
         content = val.second;
     }
 
@@ -188,7 +215,7 @@ QPair<Nody *, QString> NodyParser::parseFor(QString content)
     content = eatVariable(content, "{{");
 
     auto contentVal = parseHtml(content);
-    node->m_loopContent = contentVal.first;
+    node->m_loopNode = contentVal.first;
     content =contentVal.second;
     content = eatVariable(content, "}}");
 
@@ -284,3 +311,5 @@ QString NodyParser::eatVariable(QString content, QString val)
     }
     return content.mid(val.length());
 }
+
+$PackageWebCoreEnd

@@ -1,7 +1,9 @@
 ﻿#pragma once
 
-#include <QtCore>
 #include "Nody.h"
+#include "core/result/IResult.h"
+
+$PackageWebCoreBegin
 
 class NodyParser
 {
@@ -9,7 +11,9 @@ public:
     NodyParser();
 
 public:
-    void parse(QString content);
+    IResult<QString> exec(QString content, const QJsonObject&);
+    IResult<QString> execFile(const QString& path, const QJsonObject&);
+    Nody* parseContent(QString content);        // careful!!!
 
 private:
     QPair<Nody*, QString> parseHtml(QString);
@@ -36,3 +40,5 @@ private:
     QString m_content;
 };
 
+
+$PackageWebCoreEnd

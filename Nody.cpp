@@ -1,13 +1,44 @@
 ﻿#include "Nody.h"
+#include "core/base/IJsonUtil.h"
 
-QJsonValue Nody::getValue(const QString &, const QJsonValue&)
+$PackageWebCoreBegin
+
+QJsonValue Nody::getValue(const QString & path, const QJsonObject& obj)
 {
-    return {};
+    if(path.isEmpty()){
+        return {};
+    }
+    QStringList args = path.split(".");
+    if(!obj.contains(args.first())){
+        return {};
+    }
+    QJsonValue temp = obj[args.first()];
+    args.pop_front();
+    for(auto arg : args){
+        if(!temp.isObject()){
+            return {};
+        }
+        auto obj = temp.toObject();
+        if(!obj.contains(arg)){
+            return {};
+        }
+        temp = obj[arg];
+    }
+    return temp;
 }
 
-QJsonValue Nody::getValue(const QString &, const QMap<QString, QJsonValue>&)
+QJsonValue Nody::getValue(const QString &path, const QMap<QString, QJsonObject>&map)
 {
-    return {};
+    if(path.isEmpty()){
+        return {};
+    }
+    QStringList args = path.split(".");
+    if(!map.contains(args.first())){
+        return {};
+    }
+    const auto& obj = map[args.first()];
+    args.pop_front();
+    getValue(args.join("."), obj);
 }
 
 UnionNody::UnionNody(QList<Nody *> nodes) : m_nodes(nodes)
@@ -21,23 +52,23 @@ UnionNody::~UnionNody()
     }
 }
 
-QString UnionNody::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context){
+QString UnionNody::execute(const QJsonObject& root, QMap<QString, QJsonObject>& context){
     QString ret;
     for(auto node : m_nodes){
-        ret.append(node->operator ()(root, context));
+        ret.append(node->execute(root, context));
     }
     return ret;
 }
 
 HtmlNody::HtmlNody(const QString &html) : m_html(html){}
 
-QString HtmlNody::operator ()(const QJsonValue&, QMap<QString, QJsonValue>&){
+QString HtmlNody::execute(const QJsonObject&, QMap<QString, QJsonObject>&){
     return m_html;
 }
 
 VariableNody::VariableNody(const QString &path) : m_path(path){}
 
-QString VariableNody::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context){
+QString VariableNody::execute(const QJsonObject& root, QMap<QString, QJsonObject>& context){
     auto value = getValue(m_path, context);
     if(value.isNull() || value.isUndefined()){
         value = getValue(m_path, root);
@@ -47,19 +78,19 @@ QString VariableNody::operator ()(const QJsonValue& root, QMap<QString, QJsonVal
 
 IfNody::~IfNody()
 {
-    delete m_ifOps;
-    delete m_elseOps;
+    delete m_ifNode;
+    delete m_elseNode;
 }
 
-QString IfNody::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context)
+QString IfNody::execute(const QJsonObject& root, QMap<QString, QJsonObject>& context)
 {
     if(true){
-        if(m_ifOps){
-            return m_ifOps->operator ()(root, context);
+        if(m_ifNode){
+            return m_ifNode->execute(root, context);
         }
     }else{
-        if(m_elseOps){
-            return m_elseOps->operator ()(root, context);
+        if(m_elseNode){
+            return m_elseNode->execute(root, context);
         }
     }
     return "";
@@ -67,13 +98,13 @@ QString IfNody::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& c
 
 ForNody::~ForNody()
 {
-    delete m_loopContent;
-    m_loopContent = nullptr;
+    delete m_loopNode;
+    m_loopNode = nullptr;
 }
 
-QString ForNody::operator ()(const QJsonValue& root, QMap<QString, QJsonValue>& context)
+QString ForNody::execute(const QJsonObject& root, QMap<QString, QJsonObject>& context)
 {
-    return m_loopContent->operator ()(root, context);
+    return m_loopNode->execute(root, context);
 }
 
 NodyException::NodyException(const QString &error, const QString& content)
@@ -105,3 +136,5 @@ QString NodyException::makeTrace(const QString &error, const QString &content)
     }
     return ret;
 }
+
+$PackageWebCoreEnd
